@@ -1,0 +1,72 @@
+# This is a basic workflow that is manually triggered
+
+name: run Main
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      Crop:
+        # Prepare Spatial Analysis
+        description: Cultura
+        # Default value if no value is explicitly provided
+        default: 'soja'
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: string
+      read_data:
+        description: read_csv
+        # Default value if no value is explicitly provided
+        default: True
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: boolean
+      read_shape:
+        description: Load_prebuilt_shape
+        # Default value if no value is explicitly provided
+        default: True
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: boolean
+      p_value:
+        description: Define p-value
+        # Default value if no value is explicitly provided
+        default: "0.05"
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: string
+      weight:
+        description: Define type
+        # Default value if no value is explicitly provided
+        default: Queen
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: string
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "main"
+  main:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Runs a single command using the runners shell
+    - name: Install python package
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Execute py script
+      run: |
+        python3 main.py --crop ${{ github.event.inputs.crop }} --analysis_name ${{ github.event.inputs.read_data }} \
+        --read_shape ${{ github.event.inputs.read_shape }} --p_value ${{ github.event.inputs.p_value }}\
+        --weight ${{ github.event.inputs.weight }}
+      
