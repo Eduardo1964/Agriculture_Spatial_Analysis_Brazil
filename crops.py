@@ -1,0 +1,25 @@
+# 'Cebola',
+# crops = ['Soja (em grão)', 'Milho (em grão)', 'Trigo (em grão)', 'Arroz (em casca)']
+crops = [
+    'Laranja', 'Café (em grão) Canephora', 'Aveia (em grão)',
+         'Algodão arbóreo (em ca...', 'Cacau (em amêndoa)', 'Malva (fibra)',
+         'Café (em grão) Arábica', 'Mandioca', 'Pêssego', 'Melancia',
+         'Café (em grão) Total', 'Castanha de caju', 'Caju', 'Marmelo',
+         'Noz (fruto seco)', 'Maçã', 'Amendoim (em casca)',
+         'Fumo (em folha)', 'Caqui', 'Sisal ou agave (fibra)', 'Mamão',
+         'Cebola', 'Abacate', 'Triticale (em grão)', 'Urucum (semente)',
+         'Alfafa fenada', 'Manga', 'Girassol (em grão)',
+    'Milho (em grão)',
+         'Batata-inglesa', 'Alho', 'Sorgo (em grão)', 'Tomate', 'Limão',
+         'Palmito', 'Linho (semente)', 'Borracha (látex líquido)',
+         'Tungue (fruto seco)', 'Erva-mate (folha verde)', 'Arroz (em casca)',
+         'Cana para forragem', 'Algodão herbáceo (em c...', 'Ervilha (em grão)',
+         'Dendê (cacho de coco)', 'Figo', 'Melão', 'Total', 'Tangerina',
+         'Maracujá', 'Cevada (em grão)', 'Soja (em grão)', 'Goiaba',
+         'Centeio (em grão)', 'Pimenta-do-reino', 'Uva',
+         'Borracha (látex coagul...', 'Azeitona', 'Cana-de-açúcar',
+         'Juta (fibra)', 'Coco-da-baía*', 'Trigo (em grão)', 'Feijão (em grão)',
+         'Pera', 'Mamona (baga)', 'Guaraná (semente)', 'Abacaxi*', 'Batata-doce',
+         'Banana (cacho)', 'Açaí', 'Chá-da-índia (folha ve...', 'Fava (em grão)',
+         'Rami (fibra)'
+]

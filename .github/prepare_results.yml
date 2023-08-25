@@ -1,0 +1,74 @@
+name: Treatment Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase_id:
+        cultura: cultura
+        default: Arroz
+        required: false
+      start_date:
+        description: Start date
+        default: 01/01/2023
+        required: true
+      period_range:
+        description: Months of data into the future
+        default:
+        required: false
+      source:
+        description: labels or risk data
+        default: labels
+        required: true
+
+jobs:
+  prepare_treatment_analysis:
+      runs-on: [self-hosted, ketchup]
+      steps:
+        - name: Checkout repo content
+          uses: actions/checkout@v2
+
+        - name: Setup python
+          uses: actions/setup-python@v2
+          with:
+            python-version: 3.7
+
+        - name: Install python packages
+          run: | #ADD requirements.txt
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+
+        - name: Make Snowflake Config File
+          run : |
+            # need snowflake config for prepdata 
+            echo "[CONNECTION]" >> snowflake.cfg
+            echo "SNOWFLAKE_USER = ${{ secrets.SNOWFLAKE_USERNAME }}" >> snowflake.cfg
+            echo "SNOWFLAKE_PASSWORD = ${{ secrets.SNOWFLAKE_PASSWORD }}" >> snowflake.cfg
+            echo "SNOWFLAKE_ACCOUNT = kqa24584" >> snowflake.cfg
+            echo "SNOWFLAKE_WAREHOUSE = DS_WH" >> snowflake.cfg
+            echo "SNOWFLAKE_DATABASE = ECOATION_LAKEHOUSE_PROD" >> snowflake.cfg
+            echo "SNOWFLAKE_QUERY_TAG = kennis" >> snowflake.cfg    
+
+
+        - name: Execute py script
+          run: |
+            python3 prepare_treatment_analysis.py \
+            --phase_id ${{ github.event.inputs.phase_id }} \
+            --start_date ${{ github.event.inputs.start_date }} \ 
+            --period_range ${{ github.event.inputs.period_range }} \
+            --source ${{ github.event.inputs.source }}
+            --snowflake_user "${{ secrets.SNOWFLAKE_USERNAME }}" \
+            --snowflake_pwd "${{ secrets.SNOWFLAKE_PASSWORD }}"\
+            --aws_creds "default|${{ secrets.APPS_PROD_ACCESS_KEY_ID }}|${{ secrets.APPS_PROD_SECRET_ACCESS_KEY }}" \
+            --aws_file "${HOME}/.aws/credentials"
+        - name: Send results to Slack workflow
+          id: slack
+          uses: slackapi/slack-github-action@v1.19.0
+          with:
+            # This data can be any valid JSON from a previous step in the GitHub Action
+            payload: |
+              {
+                "workflow_name": Prepare Treatment Analysis",
+                "run_metadata": "phase_id: ${{ github.event.inputs.phase_id }}, start_date: ${{ github.event.inputs.start_date }}, period_range: ${{ github.event.inputs.period_range }}, source: ${{ github.event.inputs.source }} "
+              }
+          env:
+            SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_REPORT_GENERATOR}}
