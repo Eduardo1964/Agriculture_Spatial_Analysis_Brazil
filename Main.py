@@ -13,7 +13,7 @@ from esda.moran import Moran_Local
 from shapely.geometry import Point, Polygon
 import libpysal as lps
 import geopandas as gpd
-from splot.esda import moran_scatterplot, plot_moran, lisa_cluster
+from splot.esda import moran_scatterplot
 import seaborn as sns
 from crops import crops
 # import locale
@@ -115,9 +115,8 @@ def prepare_dict_estados_regioes():
     return estados_dict, regioes_dict
 
 
-def prepare_crops_dataframe(analysis_params=None):
-    if analysis_params is None:
-        analysis_params = analysis_params
+def prepare_crops_dataframe():
+    global analysis_params
     directory = f'{analysis_params["diretorio"]}/base_dados'
     crops_df = pd.DataFrame()
     # for file in directory:
@@ -185,9 +184,8 @@ def format_crops_dataframe(crops_df):
     return crops_df
 
 
-def prepare_climate_data(analysis_params=None):
-    if analysis_params is None:
-        analysis_params = analysis_params
+def prepare_climate_data():
+    global analysis_params
     folder = f'{analysis_params["diretorio"]}/clima/'
     subfolders = [2020, 2021]
     k = 0
@@ -242,9 +240,8 @@ def prepare_climate_data(analysis_params=None):
     return dados_climaticos_df
 
 
-def prepare_geodataframes_crop(sel_crop_df, analysis_params=None):
-    if analysis_params is None:
-        analysis_params = analysis_params
+def prepare_geodataframes_crop(sel_crop_df):
+    global analysis_params
 
     var_selecionada = analysis_params['var_selecionada']
 
@@ -411,7 +408,10 @@ def prepare_eda_summary(crops_df):
     return table_EDA_crops
 
 
-def prepare_table_yield_classes(sel_crop_df, var_selecionada, faixas_prod_df):
+def prepare_table_yield_classes(sel_crop_df, yield_levels_df):
+    global analysis_params
+
+    var_selecionada = analysis_params['var_selecionada']
 
     niveis_produtividade = ["Muito Baixa",
                             "Baixa",
@@ -429,7 +429,7 @@ def prepare_table_yield_classes(sel_crop_df, var_selecionada, faixas_prod_df):
             (sel_crop_df[var_selecionada] < q_sup)
     )
 
-    df_filtered = sel_crop_df[remove_outliers]
+    df_filtered = sel_crop_df.loc[remove_outliers]
     df_filtered['class'], intervalos = pd.cut(
         df_filtered[var_selecionada],
         bins=5,
@@ -455,16 +455,16 @@ def prepare_table_yield_classes(sel_crop_df, var_selecionada, faixas_prod_df):
     )
     quantiles_df['faixa_prod'] = quantiles_df['class'].map(prod_dict)
 
-    if faixas_prod_df.empty:
-        faixas_prod_df = quantiles_df
+    if yield_levels_df.empty:
+        yield_levels_df = quantiles_df
     else:
-        faixas_prod_df = pd.concat([faixas_prod_df, quantiles_df])
-    return faixas_prod_df
+        yield_levels_df = pd.concat([yield_levels_df, quantiles_df])
+    return yield_levels_df
 
 
-def prepare_map_crop_quantiles(sel_crop_df, analysis_params=None):
-    if analysis_params is None:
-        analysis_params = analysis_params
+def prepare_map_crop_quantiles(sel_crop_df):
+
+    global analysis_params
 
     crop = analysis_params['crop']
     var_nome_original = analysis_params['variavel']
@@ -472,14 +472,15 @@ def prepare_map_crop_quantiles(sel_crop_df, analysis_params=None):
     weights = analysis_params['weight']
     directory = f'{analysis_params["diretorio"]}/base_dados'
     column_path = f'{directory}/shapes/{crop}/{var_selecionada}'
-
-    missing_kwds = dict(color='grey', label='No Data')
+    # sel_crop_df[var_selecionada] = int(sel_crop_df[var_selecionada])
+    missing_kwds = dict(color='grey', label='Sem dados')
     ax = sel_crop_df.plot(column=var_selecionada, legend=True,
                           scheme="quantiles",
                           figsize=(15, 15),
                           legend_kwds=dict(
-                              bbox_to_anchor=(0.25, 0.4),
-                              fontsize=24
+                              bbox_to_anchor=(0.35, 0.4),
+                              fontsize=24,
+                            fmt= "{:.0f}"
                           ),
                           missing_kwds=missing_kwds
                           )
@@ -492,9 +493,8 @@ def prepare_map_crop_quantiles(sel_crop_df, analysis_params=None):
 
 
 # Spatial analysis
-def run_spatial_analysis(crop_geodf, analysis_params=None):
-    if analysis_params is None:
-        analysis_params = analysis_params
+def run_spatial_analysis(crop_geodf):
+    global analysis_params
     weights = analysis_params['weight']
     var_selecionada = analysis_params['var_selecionada']
 
@@ -557,8 +557,8 @@ def prepare_scatter_plots(moran_loc, mi):
     column_path = f'{directory}/shapes/{crop}/{var_selecionada}'
 
     # Generates Moran's Global Scatterplot
-    fig, ax = plt.subplots(figsize=(21, 10))
-    moran_scatterplot(mi, aspect_equal=True, zstandard=True, ax=ax)
+    fig, ax = plt.subplots(figsize=(12, 12))
+    moran_scatterplot(mi, aspect_equal=False, zstandard=True, ax=ax)
     plt.suptitle(f"{crop}, {var_nome_original}"
                  f"\n Moran's p-value: {str(mi.p_norm)}"
                  f"\n Moran's z-score: {str(mi.z_norm)}"
@@ -572,7 +572,7 @@ def prepare_scatter_plots(moran_loc, mi):
     # Generates Moran Local Scatterplot
     fig, ax = moran_scatterplot(moran_loc, p=p)
     ax.set_title("Moran Local Scatterplot", fontsize=22)
-    ax.set_xlabel(var_nome_original, fontsize=18)
+    ax.set_xlabel('kg ha\u207b\u00b9', fontsize=18)
     ax.set_ylabel('Spatial Lag', fontsize=18)
     ax.text(1.95, 0.5, "HH", fontsize=25)
     ax.text(1.95, -1, "HL", fontsize=25)
@@ -589,11 +589,9 @@ def prepare_scatter_plots(moran_loc, mi):
     plt.close()
 
 
-def lisa_cluster_manual(gdf, completo_gdf,Moran_local, analysis_params=None,
-                        HH_only=False
-                        ):
-    if analysis_params is None:
-        analysis_params = analysis_params
+def lisa_cluster_manual(gdf, completo_gdf,Moran_local, HH_only=False):
+
+    global analysis_params
     
     p = analysis_params['p-value']
     weights = analysis_params['weight']
@@ -621,7 +619,7 @@ def lisa_cluster_manual(gdf, completo_gdf,Moran_local, analysis_params=None,
     gdf = gdf.assign(cl=labels).set_index('old_index')
 
     completo_gdf = completo_gdf.combine_first(gdf)
-    completo_gdf.fillna('-', inplace=True)
+    completo_gdf['cl'].fillna('- Sem dados', inplace=True)
     ax = completo_gdf.plot(column='cl', categorical=True, \
                                     k=2, cmap=hmap, linewidth=0.1, ax=ax, \
                                     edgecolor='white', legend=True, legend_kwds=dict(
@@ -720,7 +718,7 @@ table_moran_crop = pd.DataFrame(
 
 n = 0
 
-faixas_prod_df = pd.DataFrame()
+yield_levels_df = pd.DataFrame()
 
 for crop in crops:
     print(f'Preparing: {crop} \n '
@@ -735,18 +733,28 @@ for crop in crops:
             (crops_df[columns_dict['Cultura']] == crop) &
             (crops_df[columns_dict['Nivel']] == 4)
             ]
+        IQ1, _, IQ3=sel_crop_df[var_selecionada].quantile([0.25, 0.5, 0.75])
+        IQR = IQ3 - IQ1
+        lower_bound= IQ1 - (1.5 * IQR)
+        upper_bound = IQ3 + (1.5 * IQR)
+        # filtered_range = (sel_crop_df[var_selecionada]>=lower_bound) & (sel_crop_df[var_selecionada]<=upper_bound)
 
-        # sel_crop_df = sel_crop_df.loc[sel_crop_df['Municipio'].notnull()]
+        # sel_crop_df = sel_crop_df[filtered_range]
+        prod_values = sel_crop_df[var_selecionada].copy().values
+        prod_values = np.where((prod_values < lower_bound), np.nan, prod_values)
+        prod_values = np.where((prod_values > upper_bound), np.nan, prod_values)# sel_crop_df = sel_crop_df.loc[sel_crop_df['Municipio'].notnull()]
+        sel_crop_df[var_selecionada] = prod_values
         # geodata.to_csv(directory+'/geodata.csv')
         # Padronizando regras de nomenclatura entre os dois datasets
         geodata.loc[:, ('name_muni')] = \
             geodata.loc[:,('name_muni')].str.lower().apply(
                 unidecode).str.replace('-', ' ')
+        copy_df = sel_crop_df.copy()
+        mask = columns_dict['Municipio']
 
-        sel_crop_df.loc[:, (columns_dict['Municipio'])] = \
-            sel_crop_df.loc[:, (columns_dict['Municipio'])].str.lower().apply(
-                unidecode).str.replace('-', ' ')
+        copy_df.loc[:,(mask)] = copy_df.loc[:, mask].str.lower().replace('-', ' ').apply(unidecode)
 
+        sel_crop_df = copy_df
         sel_crop_df = pd.merge(
             geodata, sel_crop_df,
             right_on=[columns_dict['UF_sigla'], columns_dict['Municipio']],
@@ -756,19 +764,21 @@ for crop in crops:
 
         sel_crop_df = gpd.GeoDataFrame(sel_crop_df)
 
-        cultura_climate_gdf = gpd.sjoin(sel_crop_df, climate_gdf)
-
-        # Classifica a area colhida em cinco niveis de produtividade
-        # TODO verify if indentation level is correct
-        faixas_prod_df = prepare_table_yield_classes(
-            sel_crop_df=sel_crop_df,
-            var_selecionada=var_selecionada,
-            faixas_prod_df=faixas_prod_df
-        )
-
         if not os.path.exists(shape_path):
             os.makedirs(shape_path)
         sel_crop_df.to_file(shape_filename)
+
+
+    crs_value = sel_crop_df.crs
+    print(crs_value)
+    cultura_climate_gdf = gpd.sjoin(sel_crop_df, climate_gdf.set_crs(crs=crs_value))
+
+    # Classifica a area colhida em cinco niveis de produtividade
+    # TODO verify if indentation level is correct
+    yield_levels_df = prepare_table_yield_classes(
+        sel_crop_df=sel_crop_df,
+        yield_levels_df=yield_levels_df
+    )
 
     column_path = shape_path + "/" + str(var_selecionada)
     if not os.path.exists(column_path):
@@ -776,7 +786,7 @@ for crop in crops:
 
     # TODO quantiles must disregard outliers and be done in terms of (Area or Yield)
     # Prepares the maps for crop with yield quantiles
-    prepare_map_crop_quantiles(sel_crop_df, var_selecionada)
+    prepare_map_crop_quantiles(sel_crop_df)
 
     crop_geodf, crop_full_geodf = prepare_geodataframes_crop(sel_crop_df)
 
@@ -793,5 +803,54 @@ for crop in crops:
                         )
 
     n += 1
+table_moran_crop['p-valor'] = ['Significativo' if p<0.05 else 'Não Significativo' for p in table_moran_crop['p-value']]
 table_moran_crop.to_csv(directory+"/summary_table_crops.csv")
 
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
+p1 = sns.scatterplot(table_moran_crop, x='Municipios', y="Moran's I", hue='p-valor', ax=ax)
+
+for line in range(0,table_moran_crop.shape[0]):
+    if table_moran_crop["Municipios"][line] > 2500:
+         p1.text(table_moran_crop["Municipios"][line]+0.01, table_moran_crop["Moran's I"][line],
+         table_moran_crop["Cultura"][line], horizontalalignment='left',
+         size='medium', color='black', weight='semibold')
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('Municipios', fontsize=18)
+plt.ylabel('Estátistica Global de Moran (I)', fontsize=18)
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+plt.savefig(directory+"/global_moran_crops.png")
+plt.close()
+
+yield_levels_df.to_csv(directory+"/yield_levels.csv")
+region_level_df = yield_levels_df.groupby(['name_regio', 'class']).agg(Total=('Area_Faixa_Prod', np.sum)).reset_index()
+region_level_df['Milhoes ha'] = region_level_df['Total']/(10**6)
+
+sns.set(font_scale=2.5)
+g = sns.catplot(region_level_df,
+                x='class',
+                y='Milhoes ha',
+               palette='Blues',
+                row='name_regio',
+                row_order=['Norte', 'Nordeste', 'Centro Oeste', 'Sudeste', 'Sul'],
+                kind='bar',
+                sharey=False,
+                height=6, aspect=1.5,
+                order=["Muito Baixa","Baixa","Media","Alta","Muito Alta"]
+                )
+# iterate through axes
+for ax in g.axes.ravel():
+
+    # add annotations
+    for c in ax.containers:
+        labels = [f'{(v.get_height()):.1f}' for v in c]
+        ax.bar_label(c, labels=labels, label_type='edge')
+    ax.margins(y=0.2)
+
+
+
+g.set_ylabels("ha x $10^6$")
+g.set_titles(template='{row_name}', fontdict={'fontsize': 20},y=0.90, x=-0.1, ha='right')
+plt.tight_layout()
+plt.savefig(directory+"/regions_yield_classes.png")
